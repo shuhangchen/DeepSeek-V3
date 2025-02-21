@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = ["torch==2.6.0", "triton==3.0.0", "tomli==2.2.1"]
+dependencies = ["torch==2.6.0", "triton==3.2.0", "tomli==2.2.1"]
 
 [project.scripts]
 moe = "moe:main"
