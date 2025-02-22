@@ -1,14 +1,15 @@
 import os
-import json
-from argparse import ArgumentParser
-from typing import List
 
 import torch
 import torch.distributed as dist
 
+from moe.config import Config
+from moe.model import Transformer
+from moe.tokenizer import TikTokenizer
+from moe.generate import generate
+
 def main(
-    ckpt_path: str,
-    config: str,
+    config_path: str,
     interactive: bool = True,
     max_new_tokens: int = 100,
     temperature: float = 1.0,
@@ -18,7 +19,7 @@ def main(
 
     Args:
         ckpt_path (str): Path to the model checkpoint directory.
-        config (str): Path to the model configuration file.
+        config_path (str): Path to the model configuration file.
         interactive (bool, optional): Whether to run in interactive mode. Defaults to True.
         max_new_tokens (int, optional): Maximum number of new tokens to generate. Defaults to 100.
         temperature (float, optional): Temperature for sampling. Defaults to 1.0.
@@ -35,12 +36,10 @@ def main(
     torch.set_default_dtype(torch.bfloat16)
     torch.set_num_threads(8)
     torch.manual_seed(965)
-    with open(config) as f:
-        args = ModelArgs(**json.load(f))
-    print(args)
+    config = Config(config_path)
     with torch.device("cuda"):
-        model = Transformer(args)
-    tokenizer = TikTokenizer(os.path.join(ckpt_path, "tokenizer.model"))
+        model = Transformer(config.model)
+    tokenizer = TikTokenizer(config.model.tokenizer_path)
     tokenizer.decode(generate(model, [tokenizer.encode("DeepSeek agent")], 10, -1, 0.2)[0])
     # load_model(model, os.path.join(ckpt_path, f"model{rank}-mp{world_size}.safetensors"))
 
@@ -72,3 +71,6 @@ def main(
 
     if world_size > 1:
         dist.destroy_process_group()
+
+if __name__ == "__main__":
+    main("./config/tiny.toml")
