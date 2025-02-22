@@ -5,11 +5,10 @@ from typing import List
 
 import torch
 import torch.distributed as dist
-from transformers import AutoTokenizer
-from safetensors.torch import load_model
+
 
 from model import Transformer, ModelArgs
-
+from tokenizer import TikTokenizer
 
 def sample(logits, temperature: float = 1.0):
     """
@@ -81,7 +80,6 @@ def generate(
 def main(
     ckpt_path: str,
     config: str,
-    input_file: str = "",
     interactive: bool = True,
     max_new_tokens: int = 100,
     temperature: float = 1.0,
@@ -92,7 +90,6 @@ def main(
     Args:
         ckpt_path (str): Path to the model checkpoint directory.
         config (str): Path to the model configuration file.
-        input_file (str, optional): Path to a file containing input prompts. Defaults to "".
         interactive (bool, optional): Whether to run in interactive mode. Defaults to True.
         max_new_tokens (int, optional): Maximum number of new tokens to generate. Defaults to 100.
         temperature (float, optional): Temperature for sampling. Defaults to 1.0.
@@ -114,9 +111,9 @@ def main(
     print(args)
     with torch.device("cuda"):
         model = Transformer(args)
-    tokenizer = AutoTokenizer.from_pretrained(ckpt_path)
-    tokenizer.decode(generate(model, [tokenizer.encode("DeepSeek")], 2, -1, 1.)[0])
-    load_model(model, os.path.join(ckpt_path, f"model{rank}-mp{world_size}.safetensors"))
+    tokenizer = TikTokenizer(os.path.join(ckpt_path, "tokenizer.model"))
+    tokenizer.decode(generate(model, [tokenizer.encode("DeepSeek agent")], 10, -1, 0.2)[0])
+    # load_model(model, os.path.join(ckpt_path, f"model{rank}-mp{world_size}.safetensors"))
 
     if interactive:
         messages = []
@@ -142,17 +139,7 @@ def main(
             completion = tokenizer.decode(completion_tokens[0], skip_special_tokens=True)
             print(completion)
             messages.append({"role": "assistant", "content": completion})
-    else:
-        with open(input_file) as f:
-            prompts = [line.strip() for line in f.readlines()]
-        assert len(prompts) <= args.max_batch_size, f"Number of prompts exceeds maximum batch size ({args.max_batch_size})"
-        prompt_tokens = [tokenizer.apply_chat_template([{"role": "user", "content": prompt}], add_generation_prompt=True) for prompt in prompts]
-        completion_tokens = generate(model, prompt_tokens, max_new_tokens, tokenizer.eos_token_id, temperature)
-        completions = tokenizer.batch_decode(completion_tokens, skip_special_tokens=True)
-        for prompt, completion in zip(prompts, completions):
-            print("Prompt:", prompt)
-            print("Completion:", completion)
-            print()
+    
 
     if world_size > 1:
         dist.destroy_process_group()
@@ -174,12 +161,10 @@ if __name__ == "__main__":
         AssertionError: If neither input-file nor interactive mode is specified.
     """
     parser = ArgumentParser()
-    parser.add_argument("--ckpt-path", type=str, required=True)
+    parser.add_argument("--ckpt-path", type=str, required=False, default="")
     parser.add_argument("--config", type=str, required=True)
-    parser.add_argument("--input-file", type=str, default="")
     parser.add_argument("--interactive", action="store_true")
     parser.add_argument("--max-new-tokens", type=int, default=200)
     parser.add_argument("--temperature", type=float, default=0.2)
     args = parser.parse_args()
-    assert args.input_file or args.interactive, "Either input-file or interactive mode must be specified"
-    main(args.ckpt_path, args.config, args.input_file, args.interactive, args.max_new_tokens, args.temperature)
+    main(args.ckpt_path, args.config, args.interactive, args.max_new_tokens, args.temperature)
