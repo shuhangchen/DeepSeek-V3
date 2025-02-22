@@ -4,6 +4,7 @@ import tomli
 from collections import defaultdict
 from moe import logger
 
+from moe.model import ModelArgs
 
 class Config:
     """
@@ -58,9 +59,9 @@ class Config:
         return self.config
 
     def _validate_config(self) -> None:
-        assert self.model.name
-        assert self.model.flavor
-        assert self.model.tokenizer_path
+        assert self.model 
+        self.model = ModelArgs(self.model)
+        
 
 
 if __name__ == "__main__":
