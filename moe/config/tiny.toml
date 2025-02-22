@@ -1,4 +1,7 @@
 [model]
+name = "tiny"
+flavor = "moe"
+tokenizer_path = "assets/c100k_base.tiktoken"
 vocab_size = 102400
 dim = 2048
 inter_dim = 10944
