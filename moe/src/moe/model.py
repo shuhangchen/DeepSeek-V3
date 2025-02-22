@@ -51,6 +51,7 @@ class ModelArgs:
         beta_slow (int): Slow beta correction factor.
         mscale (float): Scaling factor for extended attention.
     """
+    name: str = "tiny"
     max_batch_size: int = 8
     max_seq_len: int = 4096 * 4
     dtype: Literal["bf16", "fp8"] = "bf16"

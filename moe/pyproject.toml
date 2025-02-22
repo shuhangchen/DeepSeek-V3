@@ -10,6 +10,7 @@ dependencies = [
     "tomli==2.2.1",
     "tiktoken==0.9.0",
     "numpy>=2.2.3",
+    "blobfile>=3.0.0",
 ]
 
 [project.scripts]

@@ -30,4 +30,4 @@ beta_slow = 1
 mscale = 0.707
 
 [tokenizer]
-path = "assets/c100k_base.tiktoken"
+path = "./asset/cl100k_base.tiktoken"

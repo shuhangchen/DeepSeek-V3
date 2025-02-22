@@ -49,9 +49,8 @@ class Config:
         for k, v in config.items():
             class_type = type(k.title(), (), v)
             setattr(self, k, class_type())
-            print(f"Setting {k} to {v}")
 
-        
+        self.model = ModelArgs(**config["model"])
         self._validate_config()
         return config
 
@@ -60,7 +59,6 @@ class Config:
 
     def _validate_config(self) -> None:
         assert self.model 
-        self.model = ModelArgs(self.model)
         
 
 
