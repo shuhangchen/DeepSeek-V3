@@ -3,7 +3,6 @@ name = "tiny"
 max_batch_size = 2
 max_seq_len = 1024 
 dtype = "bf16"
-vocab_size = 102400
 dim = 128
 inter_dim = 256
 moe_inter_dim = 32

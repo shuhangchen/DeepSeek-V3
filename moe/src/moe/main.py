@@ -37,10 +37,11 @@ def main(
     torch.set_num_threads(8)
     torch.manual_seed(965)
     config = Config(config_path)
-    with torch.device("cuda"):
-        model = Transformer(config.model)
     tokenizer = TikTokenizer(config.tokenizer.path)
-    tokenizer.decode(generate(model, [tokenizer.encode("DeepSeek agent")], 10, -1, 0.2)[0])
+    with torch.device("cuda"):
+        config.model.vocab_size = tokenizer.vocab_size
+        model = Transformer(config.model)
+    tokenizer.decode(generate(model, [tokenizer.encode("DeepSeek agent", bos=True, eos=True)], 10, -1, 0.2)[0])
     # load_model(model, os.path.join(ckpt_path, f"model{rank}-mp{world_size}.safetensors"))
 
     if interactive:
@@ -62,10 +63,10 @@ def main(
                 messages.clear()
                 continue
             messages.append({"role": "user", "content": prompt})
-            prompt_tokens = tokenizer.apply_chat_template(messages, add_generation_prompt=True)
+            prompt_tokens = tokenizer.apply_chat_template(messages, tokenize=True)
             completion_tokens = generate(model, [prompt_tokens], max_new_tokens, tokenizer.eos_token_id, temperature)
             completion = tokenizer.decode(completion_tokens[0], skip_special_tokens=True)
-            print(completion)
+            print("model response:\n", completion)
             messages.append({"role": "assistant", "content": completion})
     
 

@@ -104,6 +104,20 @@ class TikTokenizer(Tokenizer):
             f"TikTokenizer built: #words {self.n_words}, BOS ID {self.bos_id}, EOS ID {self.eos_id}"
         )
 
+        self.chat_template = (
+            "<|begin_of_text|>\n"  # Begin of overall text.
+            "{messages}"           # Placeholder for the formatted messages.
+            "<|end_of_text|>"       # End of overall text.
+        )
+
+    @property
+    def eos_token_id(self) -> int:
+        return self.eos_id
+
+    @property
+    def vocab_size(self) -> int:
+        return self.n_words
+
     def encode(
         self,
         s: str,
@@ -169,7 +183,7 @@ class TikTokenizer(Tokenizer):
             t.append(self.eos_id)
         return t
 
-    def decode(self, t: Sequence[int]) -> str:
+    def decode(self, t: Sequence[int], skip_special_tokens: bool = True) -> str:
         """
         Decodes a list of token IDs into a string.
 
@@ -181,6 +195,45 @@ class TikTokenizer(Tokenizer):
         """
         # Typecast is safe here. Tiktoken doesn't do anything list-related with the sequence.
         return self.model.decode(cast(List[int], t))
+
+    def apply_chat_template(self, messages: List[Dict[str, str]], tokenize: bool = True) -> List[int]:
+        """
+        Applies a predefined chat template to a list of messages and tokenizes the result.
+
+        Each message should be a dict containing:
+            - "role": The speaker's role.
+            - "content": The message content.
+
+        Each message is formatted as:
+            <|im_start|>{role}
+            {content}
+            <|eot_id|>
+
+        All formatted messages are then inserted into the predefined template, which wraps them
+        between the BOS and EOS tokens (i.e. <|begin_of_text|> and <|end_of_text|>).
+
+        Args:
+            messages: A list of dicts with keys "role" and "content".
+            tokenize: Whether to tokenize the resulting string using self.model.encode.
+                      If False, the string is encoded as UTF-8 and converted to integer codes.
+
+        Returns:
+            A list of integer token IDs.
+        """
+        # Format each message with the designated delimiters.
+        formatted_messages = ""
+        for message in messages:
+            role = message.get("role", "")
+            content = message.get("content", "")
+            formatted_messages += f"<|im_start|>{role}\n{content}\n<|eot_id|>\n"
+
+        # Insert formatted messages into the predefined chat template.
+        final_str = self.chat_template.format(messages=formatted_messages)
+
+        if tokenize:
+            return self.model.encode(final_str, allowed_special=set(self.special_tokens.keys()))
+        else:
+            return list(final_str.encode("utf-8"))
 
     @staticmethod
     def _split_whitespaces_or_nonwhitespaces(
