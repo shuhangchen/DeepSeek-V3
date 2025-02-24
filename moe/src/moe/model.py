@@ -361,14 +361,18 @@ def precompute_freqs_cis(args: ModelArgs) -> torch.Tensor:
         ramp_func = torch.clamp(linear_func, 0, 1)
         return ramp_func
 
+    # shape: (dim/2,)
     freqs = 1.0 / (base ** (torch.arange(0, dim, 2, dtype=torch.float32) / dim))
     if seqlen > args.original_seq_len:
         low, high = find_correction_range(beta_fast, beta_slow, dim, base, args.original_seq_len)
         smooth = 1 - linear_ramp_factor(low, high, dim // 2)
         freqs = freqs / factor * (1 - smooth) + freqs * smooth
 
+    # shape: (seqlen,)
     t = torch.arange(seqlen)
+    # shape: (seqlen, dim/2)
     freqs = torch.outer(t, freqs)
+    # shape: (seqlen, dim/2)
     freqs_cis = torch.polar(torch.ones_like(freqs), freqs)
     return freqs_cis
 
@@ -454,6 +458,7 @@ class MLA(nn.Module):
         Returns:
             torch.Tensor: Output tensor with the same shape as the input.
         """
+        # shape: (bsz, seqlen, dim)
         bsz, seqlen, _ = x.size()
         end_pos = start_pos + seqlen
         if self.q_lora_rank == 0:
@@ -529,7 +534,7 @@ class MLP(nn.Module):
         """
         return self.w2(F.silu(self.w1(x)) * self.w3(x))
 
-
+# stopped here
 class Gate(nn.Module):
     """
     Gating mechanism for routing inputs in a mixture-of-experts (MoE) model.
